@@ -1,0 +1,20 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    # Next.js SSR (App Router) — Amplify serves the .next output on its
+    # managed compute. Do NOT set FIREWORKS_API_KEY here: the app is BYOK,
+    # visitors supply their own key in Settings.
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*
