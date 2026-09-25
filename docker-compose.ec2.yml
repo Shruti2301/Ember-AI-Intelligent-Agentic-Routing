@@ -1,0 +1,87 @@
+# Ember AI — EC2 deployment. Two ways to use it:
+#
+#   A) Build on the instance (simplest, arch always matches). Needs ~2GB RAM
+#      for `next build` — add swap first on a 1GB instance.
+#        docker compose -f docker-compose.ec2.yml up -d --build
+#
+#   B) Pull a prebuilt image (better for small instances / repeatable deploys).
+#        IMAGE=<acct>.dkr.ecr.<region>.amazonaws.com/ember-ai:v1 \
+#          docker compose -f docker-compose.ec2.yml up -d
+#
+# Sizing: Laya (English checkpoint) idles at ~2.2GB RAM on its own. 4GB
+# (t3.medium) is the floor; 8GB (t3.large) leaves room for `next build`.
+# A 1-2GB instance will OOM.
+#
+# BASE_PATH defaults to "" here (served at /), unlike the local compose file
+# which defaults to /emberai. It is baked in at build time, so switching it
+# on an already-built image requires a rebuild.
+#
+# The app is NOT published directly — Caddy terminates TLS and proxies to it.
+# That matters here: users paste their own Fireworks API key into Settings,
+# so the origin must be HTTPS or those keys travel in cleartext.
+
+services:
+  ember-ai:
+    image: ${IMAGE:-ember-ai:local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:22-alpine}
+        NEXT_PUBLIC_BASE_PATH: ${BASE_PATH-}
+    container_name: ember-ai
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      LAYA_URL: http://laya:8000
+      # BYOK: deliberately no FIREWORKS_API_KEY. Visitors supply their own.
+      # sharedKeyAllowed() would ignore one here anyway without
+      # ALLOW_SHARED_KEY=true, which you should not set on a public host.
+    expose:
+      - "3000"
+    depends_on: [laya]
+    networks: [web]
+
+  # Laya — the prompt classifier behind the router. Internal only: the app
+  # reaches it at http://laya:8000; it is never published to the internet.
+  # English weights (~800MB) are baked into the image at build time, so it
+  # starts offline. If Laya is down or slow, the app falls back to keywords.
+  laya:
+    build:
+      context: ./laya
+      # Optional: HF_TOKEN=hf_xxx speeds up the weight download during build.
+      secrets: [hf_token]
+    image: ${LAYA_IMAGE:-ember-laya:local}
+    container_name: laya
+    environment:
+      LAYA_THREADS: ${LAYA_THREADS:-2}
+    expose:
+      - "8000"
+    restart: always
+    networks: [web]
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data      # certificates — keep this volume or you re-issue
+      - caddy_config:/config
+    depends_on: [ember-ai]
+    networks: [web]
+
+networks:
+  web:
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+secrets:
+  hf_token:
+    environment: HF_TOKEN

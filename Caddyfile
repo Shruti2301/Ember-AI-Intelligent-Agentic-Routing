@@ -1,0 +1,14 @@
+# Replace with your real hostname. Point an A record at the instance's
+# Elastic IP first — Caddy fetches a Let's Encrypt cert on startup and will
+# fail loudly if DNS doesn't resolve here yet.
+emberai.example.com {
+	encode zstd gzip
+	reverse_proxy ember-ai:3000
+}
+
+# No domain yet? Comment out the block above and use this to serve plain HTTP
+# on the instance's public IP. Fine for a smoke test, NOT for real use: the
+# app collects Fireworks API keys, which would be sent in cleartext.
+# :80 {
+# 	reverse_proxy ember-ai:3000
+# }
