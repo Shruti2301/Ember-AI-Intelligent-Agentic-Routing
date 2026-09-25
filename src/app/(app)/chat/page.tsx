@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useChatStore } from "@/store/useChatStore";
-import { routePrompt } from "@/services/router";
+import { resolveRoute } from "@/lib/routeClient";
 import { telemetry } from "@/services/telemetry";
 import { FIREWORKS_MODELS } from "@/lib/models";
 import { formatTokens, formatCost, formatDuration } from "@/lib/utils";
@@ -146,9 +146,10 @@ export default function ChatPage() {
     setStreaming(true);
 
     // Route the prompt
+    const routed = await resolveRoute(userMsg.content);
     const route = selectedModel
-      ? { ...routePrompt(input), model: selectedModel, userOverridden: true, originalModel: routePrompt(input).model }
-      : routePrompt(input);
+      ? { ...routed, model: selectedModel, userOverridden: true, originalModel: routed.model }
+      : routed;
     setCurrentRoute(route);
 
     const allMessages = [
@@ -193,7 +194,7 @@ export default function ChatPage() {
         estimatedCost: data.cost,
         cacheEstimate: data.cacheEstimate,
         status: "success",
-        routeReason: data.routeReason,
+        routeReason: route.reason,
       });
     } catch (err) {
       const errorMsg: Message = {

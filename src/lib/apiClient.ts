@@ -28,6 +28,15 @@ export function apiHeaders(extra?: HeadersInit): HeadersInit {
   };
 }
 
+// Routing needs no Fireworks key — Laya runs on our own server.
+export async function routeFetch(prompt: string): Promise<Response> {
+  return fetch(`${BASE_PATH}/api/router`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt }),
+  });
+}
+
 export async function chatFetch(body: unknown): Promise<Response> {
   return fetch(`${BASE_PATH}/api/chat`, {
     method: "POST",

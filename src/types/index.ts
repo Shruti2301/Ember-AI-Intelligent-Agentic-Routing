@@ -23,6 +23,14 @@ export interface CacheEstimate {
   latencyImprovement: number;
 }
 
+export type RouteCategory =
+  | "coding"
+  | "reasoning"
+  | "creative"
+  | "translation"
+  | "summarization"
+  | "general";
+
 export interface RouteDecision {
   model: string;
   reason: string;
@@ -30,6 +38,11 @@ export interface RouteDecision {
   expectedSpeed: "fast" | "moderate" | "slow";
   userOverridden?: boolean;
   originalModel?: string;
+  // Which layer decided: a custom Settings rule, the Laya classifier, the
+  // keyword fallback, or the catch-all default.
+  source?: "rule" | "laya" | "regex" | "default";
+  category?: RouteCategory;
+  confidence?: number;
 }
 
 export interface TelemetryEntry {

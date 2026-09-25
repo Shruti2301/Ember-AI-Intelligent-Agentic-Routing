@@ -16,9 +16,10 @@ export async function POST(req: NextRequest) {
     const { messages, model, temperature, maxTokens } = parsed.value;
 
     const lastMessage = messages[messages.length - 1]?.content || "";
-    const route = routePrompt(lastMessage);
-
-    const selectedModel = model || route.model;
+    // The browser normally routes first and sends the chosen model; only
+    // route here when it didn't, so each message costs one Laya call.
+    const route = model ? null : await routePrompt(lastMessage);
+    const selectedModel = model || route!.model;
 
     const result = await complete({
       model: selectedModel,
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
       latency: result.latency,
       cost: result.cost,
       cacheEstimate: result.cacheEstimate,
-      routeReason: route.reason,
+      routeReason: route?.reason,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";

@@ -6,8 +6,9 @@ import { Route, Zap, DollarSign, Gauge, ArrowRight, RefreshCw } from "lucide-rea
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { routePrompt } from "@/services/router";
+import { resolveRoute } from "@/lib/routeClient";
 import { FIREWORKS_MODELS } from "@/lib/models";
+import { ROUTE_CATEGORIES } from "@/lib/routing";
 import { formatCost } from "@/lib/utils";
 import type { RouteDecision } from "@/types";
 
@@ -15,12 +16,19 @@ export default function RouterPage() {
   const [prompt, setPrompt] = useState("");
   const [decision, setDecision] = useState<RouteDecision | null>(null);
   const [history, setHistory] = useState<{ prompt: string; decision: RouteDecision }[]>([]);
+  const [routing, setRouting] = useState(false);
 
-  const handleRoute = () => {
-    if (!prompt.trim()) return;
-    const result = routePrompt(prompt);
-    setDecision(result);
-    setHistory((prev) => [{ prompt: prompt.trim(), decision: result }, ...prev].slice(0, 10));
+  const handleRoute = async () => {
+    const text = prompt.trim();
+    if (!text || routing) return;
+    setRouting(true);
+    try {
+      const result = await resolveRoute(text);
+      setDecision(result);
+      setHistory((prev) => [{ prompt: text, decision: result }, ...prev].slice(0, 10));
+    } finally {
+      setRouting(false);
+    }
   };
 
   const model = decision ? FIREWORKS_MODELS.find((m) => m.id === decision.model) : null;
@@ -56,9 +64,9 @@ export default function RouterPage() {
                 className="w-full rounded-xl border border-[#F0E4E0] bg-white p-4 text-sm text-[#222] placeholder:text-[#888] focus:outline-none focus:ring-2 focus:ring-[#FF7A6E]/30 focus:border-[#FF7A6E]/50 resize-none transition-all"
               />
               <div className="flex justify-end mt-3">
-                <Button onClick={handleRoute} disabled={!prompt.trim()} className="gap-2">
+                <Button onClick={handleRoute} disabled={!prompt.trim() || routing} className="gap-2">
                   <Route className="w-4 h-4" />
-                  Route It
+                  {routing ? "Routing…" : "Route It"}
                 </Button>
               </div>
             </CardContent>
@@ -72,31 +80,20 @@ export default function RouterPage() {
                 Routing Logic
               </CardTitle>
               <p className="text-xs text-[#888]">
-                Ember uses keyword-matching heuristics and configurable rules.
+                Your Settings rules win first, then the Laya classifier picks a category, with keyword matching as the fallback.
               </p>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#FFF9F5] text-xs">
-                  <span className="font-medium text-[#666] w-24">Coding</span>
-                  <span className="text-[#222] font-medium">→ GLM 5.2</span>
-                  <Badge variant="accent" className="text-[9px]">$1.40/$4.40</Badge>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#FFF9F5] text-xs">
-                  <span className="font-medium text-[#666] w-24">Math / Reasoning</span>
-                  <span className="text-[#222] font-medium">→ DeepSeek V4 Pro</span>
-                  <Badge variant="accent" className="text-[9px]">$1.74/$3.48</Badge>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#FFF9F5] text-xs">
-                  <span className="font-medium text-[#666] w-24">Simple Q&A</span>
-                  <span className="text-[#222] font-medium">→ DeepSeek V4 Flash</span>
-                  <Badge variant="accent" className="text-[9px]">$0.14/$0.28</Badge>
-                </div>
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#FFF9F5] text-xs">
-                  <span className="font-medium text-[#666] w-24">Creative Writing</span>
-                  <span className="text-[#222] font-medium">→ GLM 5.1</span>
-                  <Badge variant="accent" className="text-[9px]">$1.40/$4.40</Badge>
-                </div>
+                {ROUTING_ROWS.map((row) => (
+                  <div key={row.label} className="flex items-center justify-between p-2.5 rounded-xl bg-[#FFF9F5] text-xs">
+                    <span className="font-medium text-[#666] w-24">{row.label}</span>
+                    <span className="text-[#222] font-medium">→ {row.model?.name}</span>
+                    <Badge variant="accent" className="text-[9px]">
+                      ${row.model?.inputPrice.toFixed(2)}/${row.model?.outputPrice.toFixed(2)}
+                    </Badge>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -173,6 +170,20 @@ export default function RouterPage() {
   );
 }
 
+// Derived from the routing table so the card can't drift from what the
+// router actually does.
+const ROUTING_ROWS = (["coding", "reasoning", "general", "creative"] as const).map((c) => ({
+  label: c === "general" ? "Simple Q&A" : ROUTE_CATEGORIES[c].label,
+  model: FIREWORKS_MODELS.find((m) => m.id === ROUTE_CATEGORIES[c].model),
+}));
+
+const SOURCE_LABELS: Record<NonNullable<RouteDecision["source"]>, string> = {
+  rule: "Your rule",
+  laya: "Laya classifier",
+  regex: "Keyword fallback",
+  default: "Default",
+};
+
 function AnimatedDecision({
   decision,
   model,
@@ -230,6 +241,15 @@ function AnimatedDecision({
               <span className="flex-1 text-[#666]">Reason</span>
               <span className="text-[#222] font-medium text-right max-w-[60%]">{decision.reason}</span>
             </div>
+            {decision.source && (
+              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#FFF9F5]">
+                <Route className="w-4 h-4 text-[#FF7A6E]" />
+                <span className="flex-1 text-[#666]">Decided by</span>
+                <Badge variant={decision.source === "laya" ? "accent" : "gold"} className="text-[9px]">
+                  {SOURCE_LABELS[decision.source]}
+                </Badge>
+              </div>
+            )}
             <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#FFF9F5]">
               <Gauge className="w-4 h-4 text-[#FF7A6E]" />
               <span className="flex-1 text-[#666]">Speed</span>

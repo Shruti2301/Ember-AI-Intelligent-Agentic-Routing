@@ -22,7 +22,7 @@ import { useChatStore } from "@/store/useChatStore";
 import type { ComparisonResult, ModelInfo } from "@/types";
 
 const compareModels = FIREWORKS_MODELS.filter((m) =>
-  ["accounts/fireworks/models/deepseek-v4-flash", "accounts/fireworks/models/glm-5p2", "accounts/fireworks/models/deepseek-v4-pro", "accounts/fireworks/models/kimi-k2p5"].includes(m.id)
+  ["accounts/fireworks/models/deepseek-v4p1-flash", "accounts/fireworks/models/kimi-k2p7-code", "accounts/fireworks/models/deepseek-v4-pro-0813", "accounts/fireworks/models/glm-5p3"].includes(m.id)
 );
 
 export default function ComparisonPage() {

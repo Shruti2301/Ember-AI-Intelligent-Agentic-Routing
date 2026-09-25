@@ -2,6 +2,18 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Message, RouteDecision, TelemetryEntry, AgentLoop, AppSettings, ComparisonResult, RouterRule } from "@/types";
 import { DEFAULT_ROUTING_RULES } from "@/lib/rules";
+import { RETIRED_MODELS } from "@/lib/models";
+
+// Rules saved before a model remap still name the old models. Built-in rules
+// the user never edited take the new default; anything else keeps the user's
+// choice, swapped to the replacement if that model was retired.
+function migrateRules(rules: RouterRule[]): RouterRule[] {
+  return rules.map((r) => {
+    const d = DEFAULT_ROUTING_RULES.find((x) => x.id === r.id);
+    if (d && d.pattern === r.pattern) return { ...r, model: d.model };
+    return { ...r, model: RETIRED_MODELS[r.model] ?? r.model };
+  });
+}
 
 interface ChatStore {
   // Chat
@@ -117,7 +129,15 @@ export const useChatStore = create<ChatStore>()(
     }),
     {
       name: "ember-ai-storage",
+      version: 1,
       partialize: (state) => ({ settings: state.settings }),
+      migrate: (persisted, version) => {
+        const state = persisted as { settings?: AppSettings };
+        if (version < 1 && state?.settings?.routingRules) {
+          state.settings.routingRules = migrateRules(state.settings.routingRules);
+        }
+        return state as unknown as ChatStore;
+      },
     }
   )
 );

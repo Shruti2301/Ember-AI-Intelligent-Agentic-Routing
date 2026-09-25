@@ -1,6 +1,7 @@
 import type { TokenUsage, CacheEstimate } from "@/types";
 import { analyzeCache } from "./cacheEstimator";
 import { sharedKeyAllowed } from "@/lib/apiKey";
+import { FIREWORKS_MODELS } from "@/lib/models";
 
 const BASE_URL = process.env.FIREWORKS_BASE_URL || "https://api.fireworks.ai/inference/v1";
 
@@ -32,18 +33,8 @@ export interface FireworksCompletionResult {
 }
 
 function estimateCost(model: string, tokens: TokenUsage): number {
-  const pricing: Record<string, { input: number; output: number }> = {
-    "accounts/fireworks/models/deepseek-v4-flash": { input: 0.14, output: 0.28 },
-    "accounts/fireworks/models/deepseek-v4-pro": { input: 1.74, output: 3.48 },
-    "accounts/fireworks/models/glm-5p1": { input: 1.4, output: 4.4 },
-    "accounts/fireworks/models/glm-5p2": { input: 1.4, output: 4.4 },
-    "accounts/fireworks/routers/glm-latest": { input: 1.4, output: 4.4 },
-    "accounts/fireworks/models/glm-fast-latest": { input: 2.1, output: 6.6 },
-    "accounts/fireworks/models/kimi-k2p5": { input: 0.6, output: 3.0 },
-    "accounts/fireworks/models/gpt-oss-120b": { input: 0.15, output: 0.6 },
-  };
-
-  const p = pricing[model] || { input: 1.0, output: 3.0 };
+  const m = FIREWORKS_MODELS.find((x) => x.id === model);
+  const p = m ? { input: m.inputPrice, output: m.outputPrice } : { input: 1.0, output: 3.0 };
   const inputCost = (tokens.input / 1_000_000) * p.input;
   const outputCost = (tokens.output / 1_000_000) * p.output;
   return inputCost + outputCost;

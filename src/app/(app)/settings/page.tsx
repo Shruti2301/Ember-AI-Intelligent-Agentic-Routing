@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useChatStore } from "@/store/useChatStore";
 import { FIREWORKS_MODELS } from "@/lib/models";
+import { DEFAULT_MODEL } from "@/lib/routing";
 import type { RouterRule } from "@/types";
 
 export default function SettingsPage() {
@@ -46,7 +47,7 @@ export default function SettingsPage() {
       id: `rule-${Date.now()}`,
       name: "New Rule",
       pattern: "",
-      model: "accounts/fireworks/models/deepseek-v4-flash",
+      model: DEFAULT_MODEL,
       enabled: true,
     };
     updateRoutingRules([...settings.routingRules, newRule]);

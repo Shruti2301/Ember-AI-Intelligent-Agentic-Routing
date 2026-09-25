@@ -19,8 +19,10 @@ export async function POST(req: NextRequest) {
     const { messages, model, temperature, maxTokens } = parsed.value;
 
     const lastMessage = messages[messages.length - 1]?.content || "";
-    const route = routePrompt(lastMessage);
-    const selectedModel = model || route.model;
+    // The browser normally routes first and sends the chosen model; only
+    // route here when it didn't, so each message costs one Laya call.
+    const route = model ? null : await routePrompt(lastMessage);
+    const selectedModel = model || route!.model;
 
     const stream = await completeStream({
       model: selectedModel,
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
         try {
           controller.enqueue(
             encoder.encode(
-              JSON.stringify({ type: "route", model: selectedModel, reason: route.reason }) + "\n"
+              JSON.stringify({ type: "route", model: selectedModel, reason: route?.reason }) + "\n"
             )
           );
           for await (const chunk of stream) {

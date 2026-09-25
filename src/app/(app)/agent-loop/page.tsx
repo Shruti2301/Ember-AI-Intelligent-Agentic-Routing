@@ -144,11 +144,11 @@ export default function AgentLoopPage() {
     setError(null);
     const id = `loop-${Date.now()}`;
     const steps: AgentLoopStepType[] = [
-      { id: `${id}-plan`, phase: "plan", label: "Planning approach", content: "", model: "accounts/fireworks/models/deepseek-v4-pro", duration: 0, tokens: { input: 0, output: 0, total: 0 }, status: "pending" },
-      { id: `${id}-gen`, phase: "generate", label: "Writing code", content: "", model: "accounts/fireworks/models/glm-5p2", duration: 0, tokens: { input: 0, output: 0, total: 0 }, status: "pending" },
-      { id: `${id}-review`, phase: "review", label: "Reviewing output", content: "", model: "accounts/fireworks/models/deepseek-v4-pro", duration: 0, tokens: { input: 0, output: 0, total: 0 }, status: "pending" },
-      { id: `${id}-improve`, phase: "improve", label: "Improving solution", content: "", model: "accounts/fireworks/models/glm-5p2", duration: 0, tokens: { input: 0, output: 0, total: 0 }, status: "pending" },
-      { id: `${id}-final`, phase: "final", label: "Final answer", content: "", model: "accounts/fireworks/models/glm-5p2", duration: 0, tokens: { input: 0, output: 0, total: 0 }, status: "pending" },
+      { id: `${id}-plan`, phase: "plan", label: "Planning approach", content: "", model: "accounts/fireworks/models/deepseek-v4-pro-0813", duration: 0, tokens: { input: 0, output: 0, total: 0 }, status: "pending" },
+      { id: `${id}-gen`, phase: "generate", label: "Writing code", content: "", model: "accounts/fireworks/models/kimi-k2p7-code", duration: 0, tokens: { input: 0, output: 0, total: 0 }, status: "pending" },
+      { id: `${id}-review`, phase: "review", label: "Reviewing output", content: "", model: "accounts/fireworks/models/deepseek-v4-pro-0813", duration: 0, tokens: { input: 0, output: 0, total: 0 }, status: "pending" },
+      { id: `${id}-improve`, phase: "improve", label: "Improving solution", content: "", model: "accounts/fireworks/models/kimi-k2p7-code", duration: 0, tokens: { input: 0, output: 0, total: 0 }, status: "pending" },
+      { id: `${id}-final`, phase: "final", label: "Final answer", content: "", model: "accounts/fireworks/models/kimi-k2p7-code", duration: 0, tokens: { input: 0, output: 0, total: 0 }, status: "pending" },
     ];
 
     const newLoop: AgentLoop = {
