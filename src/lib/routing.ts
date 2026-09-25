@@ -115,23 +115,36 @@ const DEFAULT_RULE_CATEGORY: Record<string, RouteCategory> = {
   "rule-5": "summarization",
 };
 
+// Keywords must start a word and may take a common ending, so "api" no longer
+// matches inside "capital" and "reason" not inside "reasonable", while "bugs",
+// "functions" and "summarized" still count.
+const ENDINGS = "(?:s|es|d|ed|ing|er|ers)?";
+const wordPattern = (alternation: string) => new RegExp(`\\b(?:${alternation})${ENDINGS}\\b`, "i");
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const RULE_MATCHERS = DEFAULT_ROUTING_RULES.flatMap((rule) => {
+  const category = DEFAULT_RULE_CATEGORY[rule.id];
+  return category ? [{ category, name: rule.name, re: wordPattern(rule.pattern) }] : [];
+});
+
+const KEYWORD_MATCHERS = Object.entries(ROUTING_KEYWORDS).map(([category, keywords]) => ({
+  category: category as RouteCategory,
+  keywords: keywords.map((k) => ({ k, re: wordPattern(escapeRegExp(k)) })),
+}));
+
 // The original regex router, kept as the fallback for when Laya is
 // unavailable, slow, or unsure. Uses only the built-in patterns.
 export function routeByKeywords(prompt: string): RouteDecision {
-  const lower = prompt.toLowerCase();
-
-  for (const rule of DEFAULT_ROUTING_RULES) {
-    const category = DEFAULT_RULE_CATEGORY[rule.id];
-    if (category && new RegExp(rule.pattern, "i").test(lower)) {
-      return decisionForCategory(category, `Keyword match: ${rule.name}`, "regex");
+  for (const m of RULE_MATCHERS) {
+    if (m.re.test(prompt)) {
+      return decisionForCategory(m.category, `Keyword match: ${m.name}`, "regex");
     }
   }
 
-  for (const [category, keywords] of Object.entries(ROUTING_KEYWORDS)) {
-    const kw = keywords.find((k) => lower.includes(k));
+  for (const { category, keywords } of KEYWORD_MATCHERS) {
+    const kw = keywords.find(({ re }) => re.test(prompt))?.k;
     if (kw) {
-      const c = category as RouteCategory;
-      return decisionForCategory(c, `Keyword match: ${ROUTE_CATEGORIES[c].label} ("${kw}")`, "regex");
+      return decisionForCategory(category, `Keyword match: ${ROUTE_CATEGORIES[category].label} ("${kw}")`, "regex");
     }
   }
 
